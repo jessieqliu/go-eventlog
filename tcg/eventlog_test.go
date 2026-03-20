@@ -461,21 +461,17 @@ func TestIsHCRTM(t *testing.T) {
 		expected bool
 	}{
 		{
-			events: []rawEvent{
-				{index: 0, typ: EFIHCRTMEvent},
-			},
+			events: []rawEvent{{index: 0, typ: EFIHCRTMEvent}},
 			index: 0,
 			expected: true,
 		},
 		{
-			events: []rawEvent{
-				{index: 0, typ: EFIEventBase}},
+			events: []rawEvent{{index: 0, typ: EFIEventBase}},
 			index: 0,
 			expected: false,
 		},
 		{
-			events: []rawEvent{
-				{index: 1, typ: EFIHCRTMEvent}},
+			events: []rawEvent{{index: 1, typ: EFIHCRTMEvent}},
 			index: 1,
 			expected: false,
 		},
