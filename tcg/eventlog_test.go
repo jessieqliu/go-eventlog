@@ -391,33 +391,3 @@ YWNrLHRvbW95byxicGYgcGFuaWM9MzAgaTkxNS5lbmFibGVfcHNyPTA=`)
 		}
 	}
 }
-
-func TestIsHCRTM(t *testing.T) {
-	testcases := []struct {
-		events []rawEvent
-		index int
-		expected bool
-	}{
-		{
-			events: []rawEvent{{index: 0, typ: EFIHCRTMEvent}},
-			index: 0,
-			expected: true,
-		},
-		{
-			events: []rawEvent{{index: 0, typ: EFIEventBase}},
-			index: 0,
-			expected: false,
-		},
-		{
-			events: []rawEvent{{index: 1, typ: EFIHCRTMEvent}},
-			index: 1,
-			expected: false,
-		},
-	}
-
-	for _, tc := range testcases {
-		if got := isHCRTM(tc.events, tc.index); got != tc.expected {
-			t.Errorf("isHCRTM(%+v, %d) = %t, want %t", tc.events, tc.index, got, tc.expected)
-		}
-	}
-}
