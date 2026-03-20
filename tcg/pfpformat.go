@@ -355,6 +355,20 @@ func extend(pcr register.MR, replay []byte, e rawEvent, locality byte) (pcrDiges
 	return nil, nil, fmt.Errorf("no event digest matches pcr algorithm: %v", pcr.DgstAlg())
 }
 
+// Returns whether this is a HCRTM register.
+func isHCRTM(events []rawEvent, index int) bool {
+	if index != 0 {
+		return false
+	}
+	for _, e := range events {
+		if e.typ == EFIHCRTMEvent {
+			return true
+		}
+	}
+
+	return false
+}
+
 // replayPCR replays the event log for a specific PCR, using pcr and
 // event digests with the algorithm in pcr. An error is returned if the
 // replayed values do not match the final PCR digest, or any event tagged
@@ -365,7 +379,13 @@ func replayPCR(rawEvents []rawEvent, mr register.MR) ([]Event, bool) {
 		outEvents []Event
 		locality  byte
 	)
+
 	mrIdx := mr.Idx()
+
+	if isHCRTM(rawEvents, mrIdx) {
+		replay = append(bytes.Repeat([]byte{0x00}, mr.DgstAlg().Size()-1), byte(0x04))
+	}
+
 	for _, e := range rawEvents {
 		if e.index != mrIdx {
 			continue
