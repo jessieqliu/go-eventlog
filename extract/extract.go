@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/x509"
+	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -513,4 +514,114 @@ func getGrubKernelCmdlineSuffix(grubCmd []byte) int {
 		}
 	}
 	return -1
+}
+
+
+// GoogleMeasurementState represents the state of a Google Bare Metal machine.
+type GoogleMeasurementState struct {
+	BMCFirmware []byte
+	MBM         string
+	BIOS        string
+	HostKernel  []byte
+	CPUPPID     []byte
+}
+
+type googleMeasurement struct {
+	version         uint32
+	measurementTag  uint32
+	measurementSize uint32
+	content         []byte
+}
+
+func parseGMES(eventData []byte) (*googleMeasurement, error) {
+	r := bytes.NewReader(eventData)
+
+	measurement := &googleMeasurement{}
+
+	if err := binary.Read(r, binary.LittleEndian, &measurement.version); err != nil {
+		return nil, fmt.Errorf("failed to parse measurement version: %v", err)
+	}
+
+	if err := binary.Read(r, binary.LittleEndian, &measurement.measurementTag); err != nil {
+		return nil, fmt.Errorf("failed to parse measurement tag: %v", err)
+	}
+
+	if err := binary.Read(r, binary.LittleEndian, &measurement.measurementSize); err != nil {
+		return nil, fmt.Errorf("failed to parse measurement size: %v", err)
+	}
+
+	measurement.content = make([]byte, measurement.measurementSize)
+	if _, err := r.Read(measurement.content); err != nil {
+		return nil, fmt.Errorf("failed to parse measurement content: %v", err)
+	}
+
+	return measurement, nil
+}
+
+func GMESState(events []tcg.Event, hash crypto.Hash) (*GoogleMeasurementState, error) {
+
+	state := &GoogleMeasurementState{}
+	for _, event := range events {
+		eventType, err := tcg.UntrustedParseEventType(uint32(event.UntrustedType()))
+		if err != nil {
+			return nil, err
+		}
+
+		// Skip for non Event Tag events.
+		if eventType != tcg.EventTag {
+			continue
+		}
+
+		digestVerify := DigestEquals(event, event.RawData())
+		if digestVerify != nil {
+			return nil, fmt.Errorf("invalid digest at event %d: %v", event.Num(), digestVerify)
+		}
+
+		// Parse PCCClient Tagged Event from event data.
+		taggedEvent, err := tcg.ParseTaggedEventData(event.RawData())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse PCCClient Tagged Event at event %d: %v", event.Num(), err)
+		}
+
+		if taggedEvent.ID != GMESConfig.EventID {
+			return nil, fmt.Errorf("unexpected event ID at event %d: %v", event.Num(), taggedEvent.ID)
+		}
+
+		// Parse Google Measurement Event Structure.
+		gmes, err := parseGMES(taggedEvent.Data)
+		if err != nil {
+			return nil, err
+		}
+
+		switch event.MRIndex() {
+		case GMESConfig.BMCFirmwareIdx:
+			if gmes.measurementTag != GMESConfig.BMCFirmwareTag {
+				return nil, fmt.Errorf("unexpected measurement tag at event %d: %v", event.Num(), gmes.measurementTag)
+			}
+			state.BMCFirmware = gmes.content
+
+		case GMESConfig.MBMIdx:
+			if gmes.measurementTag != GMESConfig.MBMTag {
+				return nil, fmt.Errorf("unexpected measurement tag at event %d: %v", event.Num(), gmes.measurementTag)
+			}
+			state.MBM = string(gmes.content)
+
+		case GMESConfig.BIOSIdx:
+			if gmes.measurementTag != GMESConfig.BIOSTag {
+				return nil, fmt.Errorf("unexpected measurement tag at event %d: %v", event.Num(), gmes.measurementTag)
+			}
+			state.BIOS = string(gmes.content)
+
+		case GMESConfig.HostKernelIdx:
+			if gmes.measurementTag != GMESConfig.HostKernelTag {
+				return nil, fmt.Errorf("unexpected measurement tag at event %d: %v", event.Num(), gmes.measurementTag)
+			}
+			state.HostKernel = gmes.content
+
+		default:
+			return nil, fmt.Errorf("unknown MR index: %d", event.MRIndex())
+		}
+	}
+
+	return state, nil
 }

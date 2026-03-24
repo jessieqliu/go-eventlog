@@ -671,3 +671,7 @@ func decodeHex(hexStr string) []byte {
 	}
 	return bytes
 }
+
+func TestGMESState(t *testing.T) {
+	
+}
