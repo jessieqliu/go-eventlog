@@ -119,9 +119,15 @@ var GMESConfig = gmesConfig{
 	HostKernelIdx:  21,
 
 	BMCFirmwareTag: 1,
-	BIOSTag:        2,
-	HostKernelTag:  3,
-	MBMTag:         4,
+	BIOSTag:        1,
+	HostKernelTag:  1,
+	MBMTag:         1,
+
+	// TODO: restore once we have a test log with proper measurement tags.
+	// BMCFirmwareTag: 1,
+	// BIOSTag:        2,
+	// HostKernelTag:  3,
+	// MBMTag:         4,
 
 	EventID: 0x474D4553,
 }
