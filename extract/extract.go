@@ -557,8 +557,8 @@ func parseGMES(eventData []byte) (*googleMeasurement, error) {
 	return measurement, nil
 }
 
+// GMESState extracts Google Measurement Event Structure (GMES) information from a TCG event log.
 func GMESState(events []tcg.Event) (*GoogleMeasurementState, error) {
-
 	state := &GoogleMeasurementState{}
 	for _, event := range events {
 		eventType, err := tcg.UntrustedParseEventType(uint32(event.UntrustedType()))
