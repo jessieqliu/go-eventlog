@@ -516,7 +516,6 @@ func getGrubKernelCmdlineSuffix(grubCmd []byte) int {
 	return -1
 }
 
-
 // GoogleMeasurementState represents the state of a Google Bare Metal machine.
 type GoogleMeasurementState struct {
 	BMCFirmware []byte
@@ -558,7 +557,7 @@ func parseGMES(eventData []byte) (*googleMeasurement, error) {
 	return measurement, nil
 }
 
-func GMESState(events []tcg.Event, hash crypto.Hash) (*GoogleMeasurementState, error) {
+func GMESState(events []tcg.Event) (*GoogleMeasurementState, error) {
 
 	state := &GoogleMeasurementState{}
 	for _, event := range events {

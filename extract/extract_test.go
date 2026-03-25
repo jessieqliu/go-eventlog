@@ -677,12 +677,12 @@ func TestGMESState(t *testing.T) {
 	// TODO: update once we have a more complete test event log.
 	expectedGMES := &GoogleMeasurementState{
 		BIOS: "BIOS",
-		MBM: "MBM",
+		MBM:  "MBM",
 	}
 
-	hash, events := getB200GMESEvents(t)
+	events := getB200GMESEvents(t)
 
-	gmes, err := GMESState(events, hash)
+	gmes, err := GMESState(events)
 	if err != nil {
 		t.Fatalf("failed to extract GMES state: %v", err)
 	}
@@ -692,25 +692,21 @@ func TestGMESState(t *testing.T) {
 	}
 }
 
-func getB200GMESEvents(t *testing.T) (crypto.Hash, []tcg.Event) {
+func getB200GMESEvents(t *testing.T) []tcg.Event {
 	t.Helper()
 
 	log := testdata.B200GMESSimpleEventLog
 	bank := testutil.MakePCRBank(pb.HashAlgo_SHA256, map[uint32][]byte{
-			0:  decodeHex("806fcb3c4d6ee3afc8eca3d420a48c206fb23803fcbd593eebba2b1df20c322c"),
-			11: decodeHex("bbdaacd7e9dab4c992e5e941c69d3a35b57c349ab01ec673af95b3df9dd8aa34"),
-			17: decodeHex("9b94ab02f66dd85264c029dc13066c223a22e92b6231a2caf5b47b201ec7e04d"),
-			21: decodeHex("e435213b3c71ec4568e4cc4727b0cd08cb3489c1919cdb318fc089cfd94b56f7"),
-		})
+		0:  decodeHex("806fcb3c4d6ee3afc8eca3d420a48c206fb23803fcbd593eebba2b1df20c322c"),
+		11: decodeHex("bbdaacd7e9dab4c992e5e941c69d3a35b57c349ab01ec673af95b3df9dd8aa34"),
+		17: decodeHex("9b94ab02f66dd85264c029dc13066c223a22e92b6231a2caf5b47b201ec7e04d"),
+		21: decodeHex("e435213b3c71ec4568e4cc4727b0cd08cb3489c1919cdb318fc089cfd94b56f7"),
+	})
 
-	cryptoHash, err := bank.CryptoHash()
-	if err != nil {
-		t.Fatal(err)
-	}
 	events, err := tcg.ParseAndReplay(log, bank.MRs(), tcg.ParseOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return cryptoHash, events
+	return events
 }
