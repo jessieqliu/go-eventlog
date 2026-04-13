@@ -16,7 +16,9 @@ package tcg
 
 import (
 	"bytes"
+	"crypto"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"testing"
@@ -388,6 +390,60 @@ YWNrLHRvbW95byxicGYgcGFuaWM9MzAgaTkxNS5lbmFibGVfcHNyPTA=`)
 		t.Errorf("unexpected number of events in combined log: got %d, want %d", got, want)
 		for i, e := range parsed.rawEvents {
 			t.Logf("logs[%d] = %+v", i, e)
+		}
+	}
+}
+
+func TestReplayPCRSWithHCRTM(t *testing.T) {
+	decodeHex := func(input string) []byte {
+		decoded, err := hex.DecodeString(input)
+		if err != nil {
+			t.Fatalf("Failed to hex decode %q: %v", input, err)
+		}
+
+		return decoded
+	}
+
+	testDigest := "806fcb3c4d6ee3afc8eca3d420a48c206fb23803fcbd593eebba2b1df20c322c"
+	testMR := register.PCR{
+		Index: 0,
+		DigestAlg: crypto.SHA256,
+		Digest:   decodeHex(testDigest),
+	}
+
+	hcrtmEvent := rawEvent{
+		sequence: 1,
+		index: 0,
+	typ: EFIHCRTMEvent,
+		data: []byte("HCRTM"),
+		digests: []digest{
+			{crypto.SHA256, decodeHex("abababababababababababababababababababababababababababababababab")},
+		},
+	}
+
+	testcases := [][]rawEvent{
+		{
+			hcrtmEvent,
+		},
+		{
+			{
+			// Dummy event to ensure HCRTM event clears the index.
+			sequence: 0,
+			index: 0,
+			typ: EFIEventBase,
+			data: []byte("testevent"),
+			digests: []digest{
+				{crypto.SHA256, decodeHex("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd")},
+			},
+			},
+			hcrtmEvent,
+		},
+	}
+	
+	for _, tc := range testcases {
+		_, ok := replayPCR(tc, testMR)
+		if !ok {
+			t.Errorf("replayPCR(%v, %v) failed", tc, testMR)
 		}
 	}
 }
