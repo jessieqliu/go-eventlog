@@ -406,16 +406,16 @@ func TestReplayPCRSWithHCRTM(t *testing.T) {
 
 	testDigest := "806fcb3c4d6ee3afc8eca3d420a48c206fb23803fcbd593eebba2b1df20c322c"
 	testMR := register.PCR{
-		Index: 0,
+		Index:     0,
 		DigestAlg: crypto.SHA256,
-		Digest:   decodeHex(testDigest),
+		Digest:    decodeHex(testDigest),
 	}
 
 	hcrtmEvent := rawEvent{
 		sequence: 1,
-		index: 0,
-	typ: EFIHCRTMEvent,
-		data: []byte("HCRTM"),
+		index:    0,
+		typ:      EFIHCRTMEvent,
+		data:     []byte("HCRTM"),
 		digests: []digest{
 			{crypto.SHA256, decodeHex("abababababababababababababababababababababababababababababababab")},
 		},
@@ -427,19 +427,19 @@ func TestReplayPCRSWithHCRTM(t *testing.T) {
 		},
 		{
 			{
-			// Dummy event to ensure HCRTM event clears the index.
-			sequence: 0,
-			index: 0,
-			typ: EFIEventBase,
-			data: []byte("testevent"),
-			digests: []digest{
-				{crypto.SHA256, decodeHex("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd")},
-			},
+				// Dummy event to ensure HCRTM event clears the index.
+				sequence: 0,
+				index:    0,
+				typ:      EFIEventBase,
+				data:     []byte("testevent"),
+				digests: []digest{
+					{crypto.SHA256, decodeHex("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd")},
+				},
 			},
 			hcrtmEvent,
 		},
 	}
-	
+
 	for _, tc := range testcases {
 		_, ok := replayPCR(tc, testMR)
 		if !ok {
