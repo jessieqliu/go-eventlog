@@ -430,20 +430,17 @@ func TestReplayPCRSWithHCRTM(t *testing.T) {
 			expectSuccess: true,
 		},
 		{
-			events: []rawEvent{
-				{
-					// Dummy event.
-					sequence: 0,
-					index:    0,
-					typ:      EFIEventBase,
-					data:     []byte("testevent"),
-					digests: []digest{
-						{crypto.SHA256, decodeHex("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd")},
-					},
+			{
+				// Dummy event to ensure HCRTM event clears the index.
+				sequence: 0,
+				index:    0,
+				typ:      EFIEventBase,
+				data:     []byte("testevent"),
+				digests: []digest{
+					{crypto.SHA256, decodeHex("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd")},
 				},
-				hcrtmEvent,
 			},
-			expectSuccess: false,
+			hcrtmEvent,
 		},
 	}
 
