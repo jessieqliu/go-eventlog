@@ -382,8 +382,13 @@ func replayPCR(rawEvents []rawEvent, mr register.MR) ([]Event, bool) {
 			continue
 		}
 
-		// HCRTM resets the PCR to {0, ... 0, 4} prior to extending.
 		if e.typ == EFIHCRTMEvent {
+			// Expect HCRTM to be the first event in the register.
+			if len(replay) != 0 {
+				return nil, false
+			}
+
+			// HCRTM resets the PCR to {0, ... 0, 4} prior to extending.
 			replay = append(bytes.Repeat([]byte{0x00}, mr.DgstAlg().Size()-1), byte(0x04))
 		}
 

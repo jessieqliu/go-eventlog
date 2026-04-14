@@ -421,29 +421,36 @@ func TestReplayPCRSWithHCRTM(t *testing.T) {
 		},
 	}
 
-	testcases := [][]rawEvent{
+	testcases := []struct{
+		events []rawEvent
+		expectSuccess bool
+	}{
 		{
-			hcrtmEvent,
+			events: []rawEvent{hcrtmEvent},
+			expectSuccess: true,
 		},
 		{
-			{
-				// Dummy event to ensure HCRTM event clears the index.
-				sequence: 0,
-				index:    0,
-				typ:      EFIEventBase,
-				data:     []byte("testevent"),
-				digests: []digest{
-					{crypto.SHA256, decodeHex("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd")},
+			events: []rawEvent{
+				{
+					// Dummy event.
+					sequence: 0,
+					index:    0,
+					typ:      EFIEventBase,
+					data:     []byte("testevent"),
+					digests: []digest{
+						{crypto.SHA256, decodeHex("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd")},
+					},
 				},
+				hcrtmEvent,
 			},
-			hcrtmEvent,
+			expectSuccess: false,
 		},
 	}
 
 	for _, tc := range testcases {
-		_, ok := replayPCR(tc, testMR)
-		if !ok {
-			t.Errorf("replayPCR(%v, %v) failed", tc, testMR)
+		_, ok := replayPCR(tc.events, testMR)
+		if ok != tc.expectSuccess {
+			t.Errorf("replayPCR(%v, %v) returned %v, want %v", tc, testMR, ok, tc.expectSuccess)
 		}
 	}
 }
