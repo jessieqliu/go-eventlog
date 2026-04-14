@@ -421,12 +421,12 @@ func TestReplayPCRSWithHCRTM(t *testing.T) {
 		},
 	}
 
-	testcases := []struct{
-		events []rawEvent
+	testcases := []struct {
+		events        []rawEvent
 		expectSuccess bool
 	}{
 		{
-			events: []rawEvent{hcrtmEvent},
+			events:        []rawEvent{hcrtmEvent},
 			expectSuccess: true,
 		},
 		{
