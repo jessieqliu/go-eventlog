@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-// Package extract has configs for extracting information from Google measurements.
+// Package gmes has configs for extracting information from Google measurements.
 package gmes
 
 import (
@@ -70,7 +70,7 @@ var MeasurementTagConfig = measurementTagConfig{
 // EventID is the expected event ID for GMES events.
 var EventID uint32 = 0x474D4553
 
-// Corresponds to B200GMESSimpleEventLog which doesn't yet have the final measurement tags.
+// TestMeasurementConfig contains measurement tags corresponding to B200GMESSimpleEventLog.
 var TestMeasurementConfig = measurementTagConfig{
 	BIOS: 1,
 	MBM:  1,
