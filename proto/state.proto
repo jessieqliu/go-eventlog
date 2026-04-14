@@ -219,16 +219,3 @@ message FirmwareLogState {
 
   LogType log_type = 9;
 }
-
-// The state of Google Measurements (GMES) for the machine.
-message GMESState {
-  // The BMC firmware version.
-  bytes BMCFirmware = 1;
-
-  string MBM = 2;
-
-  string BIOS = 3;
-  
-  // The host kernel hash and commandline.
-  bytes HostKernel = 4;
-}
