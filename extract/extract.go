@@ -532,29 +532,39 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*gmes.State, error) {
 			return nil, err
 		}
 
-		separatorInfo := getSeparatorInfo(hash)
-		isSeparator, err := checkIfValidSeparator(event, separatorInfo)
-		if err != nil {
-			return nil, fmt.Errorf("error checking for separator: %v", err)
-		}
-
-		if isSeparator {
-			if seen, ok := seenSeparators[event.MRIndex()]; ok {
-				if seen {
-					return nil, fmt.Errorf("duplicate separator at MR%d", event.MRIndex())
-				}
-				seenSeparators[event.MRIndex()] = true
+		// Handle separator types.
+		if eventType == tcg.Separator {
+			seen, ok := seenSeparators[event.MRIndex()]
+			if !ok { // Skip if not a GMES index.
+				continue
 			}
-			continue
-		}
 
-		// Skip for non Event Tag events.
-		if eventType != tcg.EventTag {
-			continue
+			if seen {
+				return nil, fmt.Errorf("duplicate separator event at MR%d", event.MRIndex())
+			}
+
+			separatorInfo := getSeparatorInfo(hash)
+			isSeparator, err := checkIfValidSeparator(event, separatorInfo)
+			if err != nil {
+				return nil, fmt.Errorf("error checking for valid separator: %v", err)
+			}
+
+			if !isSeparator {
+				return nil, fmt.Errorf("event contains separator type but not separator content %d", event.Num())
+			}
+
+			seenSeparators[event.MRIndex()] = true
+
 		}
 
 		if seen, ok := seenSeparators[event.MRIndex()]; ok && seen {
-			return nil, fmt.Errorf("found Event Tag event at MR%d after separator", event.MRIndex())
+			// Don't trust any events for the index after separator.
+			break
+		}
+
+		if eventType != tcg.EventTag {
+			// Ignore non-Tag events since GMES events are expected to be in Tag format.
+			continue
 		}
 
 		// TODO: uncomment once we have a test log with proper digests.
