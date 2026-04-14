@@ -683,7 +683,7 @@ func TestGMESState(t *testing.T) {
 
 	events := getB200GMESEvents(t)
 
-	gmes, err := GMESState(events)
+	gmes, err := GMESState(crypto.SHA256, events)
 	if err != nil {
 		t.Fatalf("failed to extract GMES state: %v", err)
 	}

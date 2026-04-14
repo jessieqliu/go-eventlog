@@ -517,17 +517,44 @@ func getGrubKernelCmdlineSuffix(grubCmd []byte) int {
 }
 
 // GMESState extracts Google Measurement Event Structure (GMES) information from a TCG event log.
-func GMESState(events []tcg.Event) (*gmes.State, error) {
+func GMESState(hash crypto.Hash, events []tcg.Event) (*gmes.State, error) {
 	state := &gmes.State{}
+	seenSeparators := map[uint32]bool{
+		gmes.PCRConfig.BMCFirmwareIdx: false,
+		gmes.PCRConfig.MBMIdx:         false,
+		gmes.PCRConfig.BIOSIdx:        false,
+		gmes.PCRConfig.HostKernelIdx:  false,
+	}
+
 	for _, event := range events {
 		eventType, err := tcg.UntrustedParseEventType(uint32(event.UntrustedType()))
 		if err != nil {
 			return nil, err
 		}
 
+		separatorInfo := getSeparatorInfo(hash)
+		isSeparator, err := checkIfValidSeparator(event, separatorInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error checking for separator: %v", err)
+		}
+
+		if isSeparator {
+			if seen, ok := seenSeparators[event.MRIndex()]; ok {
+				if seen {
+					return nil, fmt.Errorf("duplicate separator at MR%d", event.MRIndex())
+				}
+				seenSeparators[event.MRIndex()] = true
+			}
+			continue
+		}
+
 		// Skip for non Event Tag events.
 		if eventType != tcg.EventTag {
 			continue
+		}
+
+		if seen, ok := seenSeparators[event.MRIndex()]; ok && seen {
+			return nil, fmt.Errorf("found Event Tag event at MR%d after separator", event.MRIndex())
 		}
 
 		// TODO: uncomment once we have a test log with proper digests.
