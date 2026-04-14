@@ -553,7 +553,8 @@ func GMESState(events []tcg.Event) (*gmes.State, error) {
 		}
 
 		registerCfg := gmes.PCRConfig
-		tagCfg := gmes.SampleMeasurementConfig
+		// TODO: switch to real measurement tag config once we have a suitable event log.
+		tagCfg := gmes.TestMeasurementConfig
 
 		switch event.MRIndex() {
 		case registerCfg.BMCFirmwareIdx:

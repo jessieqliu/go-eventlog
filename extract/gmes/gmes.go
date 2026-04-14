@@ -31,10 +31,10 @@ type State struct {
 
 // MeasurementEvent represents the structure of a Google measurement event.
 type MeasurementEvent struct {
-	Version         uint32
-	Tag  uint32
-	Size uint32
-	Content         []byte
+	Version uint32
+	Tag     uint32
+	Size    uint32
+	Content []byte
 }
 
 type registerConfig struct {
@@ -46,9 +46,9 @@ type registerConfig struct {
 
 type measurementTagConfig struct {
 	BMCFirmware uint32
-	MBM uint32
-	HostKernel uint32
-	BIOS uint32
+	MBM         uint32
+	HostKernel  uint32
+	BIOS        uint32
 }
 
 // PCRConfig configures the expected PCR indexes for GMES event logs.
@@ -62,20 +62,21 @@ var PCRConfig = registerConfig{
 // MeasurementTagConfig configures the expected measurement tags for GMES events.
 var MeasurementTagConfig = measurementTagConfig{
 	BMCFirmware: 1,
-	BIOS: 2,
-	HostKernel: 3,
-	MBM: 4,
+	BIOS:        2,
+	HostKernel:  3,
+	MBM:         4,
 }
 
 // EventID is the expected event ID for GMES events.
 var EventID uint32 = 0x474D4553
 
 // Corresponds to B200GMESSimpleEventLog which doesn't yet have the final measurement tags.
-var SampleMeasurementConfig = measurementTagConfig{
+var TestMeasurementConfig = measurementTagConfig{
 	BIOS: 1,
-	MBM: 1,
+	MBM:  1,
 }
 
+// ParseEvent parses a GMES event from the given data.
 func ParseEvent(eventdata []byte) (*MeasurementEvent, error) {
 	r := bytes.NewReader(eventdata)
 
