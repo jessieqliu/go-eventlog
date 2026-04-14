@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	gmes "github.com/google/go-eventlog/extract/gmes"
 	"github.com/google/go-eventlog/internal/testutil"
 	"github.com/google/go-eventlog/register"
 	"github.com/google/go-eventlog/tcg"
@@ -675,7 +676,7 @@ func decodeHex(hexStr string) []byte {
 
 func TestGMESState(t *testing.T) {
 	// TODO: update once we have a more complete test event log.
-	expectedGMES := &GoogleMeasurementState{
+	expectedGMES := &gmes.State{
 		BIOS: "BIOS",
 		MBM:  "MBM",
 	}

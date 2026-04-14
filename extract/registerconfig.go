@@ -96,38 +96,3 @@ var RTMRRegisterConfig = registerConfig{
 	},
 	LogType: pb.LogType_LOG_TYPE_CC,
 }
-
-type gmesConfig struct {
-	BMCFirmwareIdx uint32
-	MBMIdx         uint32
-	BIOSIdx        uint32
-	HostKernelIdx  uint32
-
-	BMCFirmwareTag uint32
-	BIOSTag        uint32
-	HostKernelTag  uint32
-	MBMTag         uint32
-
-	EventID uint32
-}
-
-// GMESConfig configures the expected indexes and tags for Google Measurement (GMES) event logs.
-var GMESConfig = gmesConfig{
-	BMCFirmwareIdx: 0,
-	MBMIdx:         11,
-	BIOSIdx:        17,
-	HostKernelIdx:  21,
-
-	BMCFirmwareTag: 1,
-	BIOSTag:        1,
-	HostKernelTag:  1,
-	MBMTag:         1,
-
-	// TODO: restore once we have a test log with proper measurement tags.
-	// BMCFirmwareTag: 1,
-	// BIOSTag:        2,
-	// HostKernelTag:  3,
-	// MBMTag:         4,
-
-	EventID: 0x474D4553,
-}
