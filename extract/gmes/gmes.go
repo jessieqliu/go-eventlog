@@ -62,12 +62,6 @@ var MeasurementTagConfig = measurementTagConfig{
 // EventID is the expected event ID for GMES events.
 var EventID uint32 = 0x474D4553
 
-// TestMeasurementConfig contains measurement tags corresponding to B200GMESSimpleEventLog.
-var TestMeasurementConfig = measurementTagConfig{
-	BIOS: 1,
-	MBM:  1,
-}
-
 // ParseEvent parses a GMES event from the given data.
 func ParseEvent(eventdata []byte) (*MeasurementEvent, error) {
 	r := bytes.NewReader(eventdata)
