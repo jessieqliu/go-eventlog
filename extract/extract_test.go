@@ -832,7 +832,7 @@ func getEventsFromLog(t *testing.T, events []tcg.Event) []tcg.Event {
 		if current, ok := pcrValues[e.Index]; ok {
 			h.Write(current)
 		} else {
-			// First event for this PCR - intialize with zeros.
+			// First event for this PCR - initialize with zeros.
 			initial := make([]byte, h.Size())
 			h.Write(initial)
 		}
