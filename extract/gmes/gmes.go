@@ -21,14 +21,6 @@ import (
 	"fmt"
 )
 
-// // State represents the state of a Google Bare Metal machine.
-// type State struct {
-// 	BMCFirmware []byte
-// 	MBM         string
-// 	BIOS        string
-// 	HostKernel  []byte
-// }
-
 // MeasurementEvent represents the structure of a Google measurement event.
 type MeasurementEvent struct {
 	Version uint32
