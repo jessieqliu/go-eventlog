@@ -554,12 +554,12 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*gmes.State, error) {
 			}
 
 			seenSeparators[event.MRIndex()] = true
-
+			continue
 		}
 
 		if seen, ok := seenSeparators[event.MRIndex()]; ok && seen {
 			// Don't trust any events for the index after separator.
-			break
+			continue
 		}
 
 		if eventType != tcg.EventTag {
@@ -567,11 +567,10 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*gmes.State, error) {
 			continue
 		}
 
-		// TODO: uncomment once we have a test log with proper digests.
-		// digestVerify := DigestEquals(event, event.RawData())
-		// if digestVerify != nil {
-		// 	return nil, fmt.Errorf("invalid digest at event %d: %v", event.Num(), digestVerify)
-		// }
+		// Verify event digest matches event data.
+		if err := DigestEquals(event, event.RawData()); err != nil {
+			return nil, fmt.Errorf("invalid digest at event %d: %v", event.Num(), err)
+		}
 
 		// Parse PCCClient Tagged Event from event data.
 		taggedEvent, err := tcg.ParseTaggedEventData(event.RawData())
@@ -591,7 +590,7 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*gmes.State, error) {
 
 		registerCfg := gmes.PCRConfig
 		// TODO: switch to real measurement tag config once we have a suitable event log.
-		tagCfg := gmes.TestMeasurementConfig
+		tagCfg := gmes.MeasurementTagConfig
 
 		switch event.MRIndex() {
 		case registerCfg.BMCFirmwareIdx:
