@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	gmes "github.com/google/go-eventlog/extract/gmes"
 	"github.com/google/go-eventlog/internal/testutil"
 	"github.com/google/go-eventlog/register"
@@ -677,19 +678,19 @@ func decodeHex(hexStr string) []byte {
 }
 
 func TestGMESState(t *testing.T) {
-	expectedState := &gmes.State{
-		BIOS:        "TestBIOS",
-		MBM:         "TestMBM",
-		BMCFirmware: []byte("TestBMC"),
-		HostKernel:  []byte("TestKernel"),
+	expectedState := &pb.GMESState{
+		Bios:        "TestBIOS",
+		Mbm:         "TestMBM",
+		BmcFirmware: "TestBMC",
+		HostKernel:  "TestKernel",
 	}
 
 	validEvents := []tcg.Event{
-		newGMESEvent(t, gmes.PCRConfig.BIOSIdx, gmes.MeasurementTagConfig.BIOS, []byte(expectedState.BIOS)),
+		newGMESEvent(t, gmes.PCRConfig.BIOSIdx, gmes.MeasurementTagConfig.BIOS, expectedState.Bios),
 		newSeparatorEvent(t, gmes.PCRConfig.BIOSIdx),
-		newGMESEvent(t, gmes.PCRConfig.MBMIdx, gmes.MeasurementTagConfig.MBM, []byte(expectedState.MBM)),
+		newGMESEvent(t, gmes.PCRConfig.MBMIdx, gmes.MeasurementTagConfig.MBM, expectedState.Mbm),
 		newSeparatorEvent(t, gmes.PCRConfig.MBMIdx),
-		newGMESEvent(t, gmes.PCRConfig.BMCFirmwareIdx, gmes.MeasurementTagConfig.BMCFirmware, expectedState.BMCFirmware),
+		newGMESEvent(t, gmes.PCRConfig.BMCFirmwareIdx, gmes.MeasurementTagConfig.BMCFirmware, expectedState.BmcFirmware),
 		newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx),
 		newGMESEvent(t, gmes.PCRConfig.HostKernelIdx, gmes.MeasurementTagConfig.HostKernel, expectedState.HostKernel),
 		newSeparatorEvent(t, gmes.PCRConfig.HostKernelIdx),
@@ -698,7 +699,7 @@ func TestGMESState(t *testing.T) {
 	testcases := []struct {
 		name          string
 		events        []tcg.Event
-		expectedState *gmes.State
+		expectedState *pb.GMESState
 	}{
 		{
 			name:          "valid events",
@@ -712,12 +713,12 @@ func TestGMESState(t *testing.T) {
 		},
 		{
 			name:          "invalid tag",
-			events:        []tcg.Event{newGMESEvent(t, gmes.PCRConfig.BIOSIdx, 9999, []byte("InvalidTag"))},
+			events:        []tcg.Event{newGMESEvent(t, gmes.PCRConfig.BIOSIdx, 9999, "InvalidTag")},
 			expectedState: nil, // Expect failure.
 		},
 		{
 			name:          "event after separator ignored",
-			events:        append(validEvents, newGMESEvent(t, gmes.PCRConfig.HostKernelIdx, gmes.MeasurementTagConfig.HostKernel, []byte("ModifiedKernel"))),
+			events:        append(validEvents, newGMESEvent(t, gmes.PCRConfig.HostKernelIdx, gmes.MeasurementTagConfig.HostKernel, "ModifiedKernel")),
 			expectedState: expectedState, // Should ignore the modified event after the separator.
 		},
 	}
@@ -730,7 +731,7 @@ func TestGMESState(t *testing.T) {
 				t.Fatalf("GMESState() error = %v, wantErr: %v", err, tc.expectedState == nil)
 			}
 
-			if tc.expectedState != nil && !cmp.Equal(gotState, tc.expectedState) {
+			if tc.expectedState != nil && !cmp.Equal(gotState, tc.expectedState, cmpopts.IgnoreUnexported(pb.GMESState{})) {
 				t.Errorf("GMESState() = got %+v, want %+v", gotState, tc.expectedState)
 			}
 		})
@@ -759,9 +760,9 @@ func encodeGMESEventData(t *testing.T, tag uint32, content []byte) []byte {
 }
 
 // newGMESEvent creates a tcg.Event containing a GMES measurement.
-func newGMESEvent(t *testing.T, mrIndex uint32, tag uint32, content []byte) tcg.Event {
+func newGMESEvent(t *testing.T, mrIndex uint32, tag uint32, content string) tcg.Event {
 	t.Helper()
-	data := encodeGMESEventData(t, tag, content)
+	data := encodeGMESEventData(t, tag, []byte(content))
 	digest := sha256.Sum256(data)
 	return tcg.Event{
 		Index:  int(mrIndex),

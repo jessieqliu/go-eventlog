@@ -517,8 +517,8 @@ func getGrubKernelCmdlineSuffix(grubCmd []byte) int {
 }
 
 // GMESState extracts Google Measurement Event Structure (GMES) information from a TCG event log.
-func GMESState(hash crypto.Hash, events []tcg.Event) (*gmes.State, error) {
-	state := &gmes.State{}
+func GMESState(hash crypto.Hash, events []tcg.Event) (*pb.GMESState, error) {
+	state := &pb.GMESState{}
 	seenSeparators := map[uint32]bool{
 		gmes.PCRConfig.BMCFirmwareIdx: false,
 		gmes.PCRConfig.MBMIdx:         false,
@@ -597,25 +597,25 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*gmes.State, error) {
 			if gmesEvent.Tag != tagCfg.BMCFirmware {
 				return nil, fmt.Errorf("unexpected measurement tag at event %d: %v", event.Num(), gmesEvent.Tag)
 			}
-			state.BMCFirmware = gmesEvent.Content
+			state.BmcFirmware = string(gmesEvent.Content)
 
 		case registerCfg.MBMIdx:
 			if gmesEvent.Tag != tagCfg.MBM {
 				return nil, fmt.Errorf("unexpected measurement tag at event %d: %v", event.Num(), gmesEvent.Tag)
 			}
-			state.MBM = string(gmesEvent.Content)
+			state.Mbm = string(gmesEvent.Content)
 
 		case registerCfg.BIOSIdx:
 			if gmesEvent.Tag != tagCfg.BIOS {
 				return nil, fmt.Errorf("unexpected measurement tag at event %d: %v", event.Num(), gmesEvent.Tag)
 			}
-			state.BIOS = string(gmesEvent.Content)
+			state.Bios = string(gmesEvent.Content)
 
 		case registerCfg.HostKernelIdx:
 			if gmesEvent.Tag != tagCfg.HostKernel {
 				return nil, fmt.Errorf("unexpected measurement tag at event %d: %v", event.Num(), gmesEvent.Tag)
 			}
-			state.HostKernel = gmesEvent.Content
+			state.HostKernel = string(gmesEvent.Content)
 
 		default:
 			return nil, fmt.Errorf("unknown MR index: %d", event.MRIndex())
