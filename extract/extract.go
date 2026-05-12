@@ -583,6 +583,20 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*pb.GMESState, error) {
 			}
 			state.HostKernelDigest = event.ReplayedDigest()
 
+			// Parse & populate image load event.
+			imageLoadEvent, err := tcg.ParseEFIImageLoad(bytes.NewReader(event.RawData()))
+			if err != nil {
+				return nil, fmt.Errorf("failed parsing EFI image load at host kernel event %d: %v", event.Num(), err)
+			}
+
+			state.HostKernelImageLoad = &pb.GMESState_ImageLoad{
+				LoadAddress:      imageLoadEvent.Header.LoadAddr,
+				ImageLength:      imageLoadEvent.Header.Length,
+				LinkAddress:      imageLoadEvent.Header.LinkAddr,
+				DevicePathLength: imageLoadEvent.Header.DevicePathLen,
+				DevicePath:       imageLoadEvent.DevPathData,
+			}
+
 		case registerCfg.MBMIdx:
 			continue
 

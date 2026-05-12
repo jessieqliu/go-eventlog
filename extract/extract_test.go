@@ -27,13 +27,13 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	gmes "github.com/google/go-eventlog/extract/gmes"
 	"github.com/google/go-eventlog/internal/testutil"
 	"github.com/google/go-eventlog/register"
 	"github.com/google/go-eventlog/tcg"
 	"github.com/google/go-eventlog/testdata"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	pb "github.com/google/go-eventlog/proto/state"
 )
@@ -678,6 +678,43 @@ func decodeHex(hexStr string) []byte {
 }
 
 func TestGMESState(t *testing.T) {
+	log := testdata.HostGMESEventLog
+	expectedState := &pb.GMESState{
+		BmcFirmwareDigest: decodeHex("c02bb61127ae90e3fcf2601702805592f5ee0952ee3a8bc518ac0171a75e1342"),
+		BiosDigest:        decodeHex("44b389a3de1020401e9dc7adbb8b1515e5cade4a9bdfa9cce412f3e7ba9c1650"),
+		HostKernelDigest:  decodeHex("825473358df6447f49eaaea583ab0d424fe9ba3aeeb13d0f739f3e942398701c"),
+		HostKernelImageLoad: &pb.GMESState_ImageLoad{
+			LoadAddress:      0x63407018,
+			ImageLength:      15613408,
+			LinkAddress:      0x0,
+			DevicePathLength: 136,
+			DevicePath:       decodeHex("02010c00d041030a200000000101060000010101060001000317100001000000000000000000000004012a000c00000000d0030000000000000002000000000056f5e6005eae42c9a0e1cd8fb5a1c6100202040432004500460049005c005c0042004f004f0054005c005c0042004f004f0054005800360034002e0065006600690000007fff0400"),
+		},
+	}
+
+	pcrBank := testutil.MakePCRBank(pb.HashAlgo_SHA256, map[uint32][]byte{
+		0:  decodeHex("e2edb8749753227b24dd2e6689168da5fa4c148fd4567f697c58e6dd577ae4cd"),
+		11: decodeHex("872129205c91e8027680899f6749f6409e204d9c366e40b41fedfeec0728b4c8"),
+		17: decodeHex("22edb58db85ff13e1ae8110f90955b21b4d972593c3e07d9301f93ea540fbdfd"),
+		21: decodeHex("5f60771aaf02702e3a647cdce310611e83d2669d0b77445e9b200ea3dab7993d"),
+	})
+
+	events, err := tcg.ParseAndReplay(log, pcrBank.MRs(), tcg.ParseOpts{})
+	if err != nil {
+		t.Fatalf("Error parsing events: %v", err)
+	}
+
+	gotState, err := GMESState(crypto.SHA256, events)
+	if err != nil {
+		t.Fatalf("GMESState() error = %v", err)
+	}
+
+	if diff := cmp.Diff(gotState, expectedState, protocmp.Transform()); diff != "" {
+		t.Errorf("GMESState() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestGMESStateErrors(t *testing.T) {
 	// In this library version, ReplayedDigest() returns the event digest (H(data)).
 	calcReplayed := func(data []byte) []byte {
 		h := sha256.New()
@@ -688,7 +725,6 @@ func TestGMESState(t *testing.T) {
 	expectedState := &pb.GMESState{
 		BmcFirmwareDigest: calcReplayed([]byte(gmes.BMCData)),
 		BiosDigest:        calcReplayed([]byte(gmes.BIOSData)),
-		HostKernelDigest:  calcReplayed([]byte("KernelData")),
 	}
 
 	validEvents := []tcg.Event{
@@ -696,8 +732,6 @@ func TestGMESState(t *testing.T) {
 		newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx),
 		newEvent(t, gmes.PCRConfig.BIOSIdx, tcg.GoogleDRTMEvent, []byte(gmes.BIOSData)),
 		newSeparatorEvent(t, gmes.PCRConfig.BIOSIdx),
-		newEvent(t, gmes.PCRConfig.HostKernelIdx, tcg.EFIBootServicesApplication, []byte("KernelData")),
-		newSeparatorEvent(t, gmes.PCRConfig.HostKernelIdx),
 		// MBM data is not captured in GMESState but we should ensure it's handled correctly.
 		newEvent(t, gmes.PCRConfig.MBMIdx, tcg.EventTag, []byte("please ignore me!")),
 		newSeparatorEvent(t, gmes.PCRConfig.MBMIdx),
@@ -709,19 +743,17 @@ func TestGMESState(t *testing.T) {
 		expectedState *pb.GMESState
 	}{
 		{
-			name:          "valid events",
-			events:        validEvents,
-			expectedState: expectedState,
-		},
-		{
 			name:          "duplicate separator",
-			events:        append(validEvents, newSeparatorEvent(t, gmes.PCRConfig.HostKernelIdx)),
+			events:        append(validEvents, newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx)),
 			expectedState: nil, // Expect failure.
 		},
 		{
 			name:          "event after separator ignored",
-			events:        append(validEvents, newEvent(t, gmes.PCRConfig.HostKernelIdx, tcg.EFIBootServicesApplication, []byte("ModifiedKernel"))),
-			expectedState: expectedState, // Should ignore the modified event after the separator.
+			events:        append(validEvents, 
+				newSeparatorEvent(t, gmes.PCRConfig.HostKernelIdx),
+				newEvent(t, gmes.PCRConfig.HostKernelIdx, tcg.EFIBootServicesApplication, []byte("ModifiedKernel")),
+			),
+			expectedState: expectedState, // Should ignore the event after the separator.
 		},
 	}
 
@@ -733,7 +765,7 @@ func TestGMESState(t *testing.T) {
 				t.Fatalf("GMESState() error = %v, wantErr: %v", err, tc.expectedState == nil)
 			}
 
-			if tc.expectedState != nil && !cmp.Equal(gotState, tc.expectedState, cmpopts.IgnoreUnexported(pb.GMESState{})) {
+			if tc.expectedState != nil && !cmp.Equal(gotState, tc.expectedState, protocmp.Transform()) {
 				t.Errorf("GMESState() = got %+v, want %+v", gotState, tc.expectedState)
 			}
 		})
