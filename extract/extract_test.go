@@ -678,22 +678,29 @@ func decodeHex(hexStr string) []byte {
 }
 
 func TestGMESState(t *testing.T) {
+	// In this library version, ReplayedDigest() returns the event digest (H(data)).
+	calcReplayed := func(data []byte) []byte {
+		h := sha256.New()
+		h.Write(data)
+		return h.Sum(nil)
+	}
+
 	expectedState := &pb.GMESState{
-		Bios:        "TestBIOS",
-		Mbm:         "TestMBM",
-		BmcFirmware: "TestBMC",
-		HostKernel:  "TestKernel",
+		BmcFirmwareDigest: calcReplayed([]byte(gmes.BMCData)),
+		BiosDigest:        calcReplayed([]byte(gmes.BIOSData)),
+		HostKernelDigest:  calcReplayed([]byte("KernelData")),
 	}
 
 	validEvents := []tcg.Event{
-		newGMESEvent(t, gmes.PCRConfig.BIOSIdx, gmes.MeasurementTagConfig.BIOS, expectedState.Bios),
-		newSeparatorEvent(t, gmes.PCRConfig.BIOSIdx),
-		newGMESEvent(t, gmes.PCRConfig.MBMIdx, gmes.MeasurementTagConfig.MBM, expectedState.Mbm),
-		newSeparatorEvent(t, gmes.PCRConfig.MBMIdx),
-		newGMESEvent(t, gmes.PCRConfig.BMCFirmwareIdx, gmes.MeasurementTagConfig.BMCFirmware, expectedState.BmcFirmware),
+		newEvent(t, gmes.PCRConfig.BMCFirmwareIdx, tcg.EFIHCRTMEvent, []byte(gmes.BMCData)),
 		newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx),
-		newGMESEvent(t, gmes.PCRConfig.HostKernelIdx, gmes.MeasurementTagConfig.HostKernel, expectedState.HostKernel),
+		newEvent(t, gmes.PCRConfig.BIOSIdx, tcg.GoogleDRTMEvent, []byte(gmes.BIOSData)),
+		newSeparatorEvent(t, gmes.PCRConfig.BIOSIdx),
+		newEvent(t, gmes.PCRConfig.HostKernelIdx, tcg.EFIBootServicesApplication, []byte("KernelData")),
 		newSeparatorEvent(t, gmes.PCRConfig.HostKernelIdx),
+		// MBM data is not captured in GMESState but we should ensure it's handled correctly.
+		newEvent(t, gmes.PCRConfig.MBMIdx, tcg.EventTag, []byte("please ignore me!")),
+		newSeparatorEvent(t, gmes.PCRConfig.MBMIdx),
 	}
 
 	testcases := []struct {
@@ -712,13 +719,8 @@ func TestGMESState(t *testing.T) {
 			expectedState: nil, // Expect failure.
 		},
 		{
-			name:          "invalid tag",
-			events:        []tcg.Event{newGMESEvent(t, gmes.PCRConfig.BIOSIdx, 9999, "InvalidTag")},
-			expectedState: nil, // Expect failure.
-		},
-		{
 			name:          "event after separator ignored",
-			events:        append(validEvents, newGMESEvent(t, gmes.PCRConfig.HostKernelIdx, gmes.MeasurementTagConfig.HostKernel, "ModifiedKernel")),
+			events:        append(validEvents, newEvent(t, gmes.PCRConfig.HostKernelIdx, tcg.EFIBootServicesApplication, []byte("ModifiedKernel"))),
 			expectedState: expectedState, // Should ignore the modified event after the separator.
 		},
 	}
@@ -738,35 +740,13 @@ func TestGMESState(t *testing.T) {
 	}
 }
 
-// encodeGMESEventData packages content into the Google Measurement Event Structure
-// and wraps it in a TCG Tagged Event structure.
-func encodeGMESEventData(t *testing.T, tag uint32, content []byte) []byte {
+// newEvent creates a tcg.Event containing a GMES measurement.
+func newEvent(t *testing.T, mrIndex uint32, eventType tcg.EventType, data []byte) tcg.Event {
 	t.Helper()
-	// Create GMES MeasurementEvent data
-	gmesBuf := new(bytes.Buffer)
-	binary.Write(gmesBuf, binary.LittleEndian, uint32(1))            // Version
-	binary.Write(gmesBuf, binary.LittleEndian, tag)                  // Tag
-	binary.Write(gmesBuf, binary.LittleEndian, uint32(len(content))) // Size
-	gmesBuf.Write(content)
-	gmesData := gmesBuf.Bytes()
-
-	// Wrap in TCG_PCClientTaggedEventStruct
-	taggedBuf := new(bytes.Buffer)
-	binary.Write(taggedBuf, binary.LittleEndian, gmes.EventID)          // ID
-	binary.Write(taggedBuf, binary.LittleEndian, uint32(len(gmesData))) // DataLen
-	taggedBuf.Write(gmesData)
-
-	return taggedBuf.Bytes()
-}
-
-// newGMESEvent creates a tcg.Event containing a GMES measurement.
-func newGMESEvent(t *testing.T, mrIndex uint32, tag uint32, content string) tcg.Event {
-	t.Helper()
-	data := encodeGMESEventData(t, tag, []byte(content))
 	digest := sha256.Sum256(data)
 	return tcg.Event{
 		Index:  int(mrIndex),
-		Type:   tcg.EventTag,
+		Type:   eventType,
 		Data:   data,
 		Digest: digest[:],
 	}
@@ -835,6 +815,9 @@ func getEventsFromLog(t *testing.T, events []tcg.Event) []tcg.Event {
 		} else {
 			// First event for this PCR - initialize with zeros.
 			initial := make([]byte, h.Size())
+			if e.Type == tcg.EFIHCRTMEvent {
+				initial[len(initial)-1] = 0x04
+			}
 			h.Write(initial)
 		}
 		h.Write(e.Digest)
