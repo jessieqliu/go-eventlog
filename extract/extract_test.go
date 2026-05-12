@@ -719,13 +719,13 @@ func TestGMESStateErrors(t *testing.T) {
 	}
 
 	testcases := []struct {
-		name          string
-		events        []tcg.Event
-		expectedErrStr 	string
+		name           string
+		events         []tcg.Event
+		expectedErrStr string
 	}{
 		{
-			name:          "duplicate separator",
-			events:        append(validEvents, newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx)),
+			name:           "duplicate separator",
+			events:         append(validEvents, newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx)),
 			expectedErrStr: "duplicate separator event",
 		},
 		{
