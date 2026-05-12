@@ -222,23 +222,9 @@ message FirmwareLogState {
 
 // The verified state of Google measurements on the machine.
 message GMESState {
-  message ImageLoad {
-    uint64 load_address = 1;
-
-    uint64 image_length = 2;
-
-    uint64 link_address = 3;
-
-    uint64 device_path_length = 4;
-
-    bytes device_path = 5;
-  }
-
   bytes bmc_firmware_digest = 1;
 
   bytes bios_digest = 2;
 
   bytes host_kernel_digest = 3;
-  
-  ImageLoad host_kernel_image_load = 4;
 }

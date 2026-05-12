@@ -558,43 +558,33 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*pb.GMESState, error) {
 		}
 
 		if seen, ok := seenSeparators[event.MRIndex()]; ok && seen {
-			// Don't trust any events for the index after separator.
-			continue
+			return nil, fmt.Errorf("found event after separator for MR%d at event %d", event.MRIndex(), event.Num())
 		}
 
 		registerCfg := gmes.PCRConfig
-
 		switch event.MRIndex() {
 		case registerCfg.BMCFirmwareIdx:
 			if eventType != tcg.EFIHCRTMEvent {
-				continue
+				return nil, fmt.Errorf("unexpected event type for BMC firmware event: %d", eventType)
 			}
 			state.BmcFirmwareDigest = event.ReplayedDigest()
 
 		case registerCfg.BIOSIdx:
 			if eventType != tcg.GoogleDRTMEvent {
-				continue
+				return nil, fmt.Errorf("unexpected event type for BIOS event: %d", eventType)
 			}
 			state.BiosDigest = event.ReplayedDigest()
 
 		case registerCfg.HostKernelIdx:
 			if eventType != tcg.EFIBootServicesApplication {
-				continue
+				return nil, fmt.Errorf("unexpected event type for host kernel event: %d", eventType)
 			}
 			state.HostKernelDigest = event.ReplayedDigest()
 
 			// Parse & populate image load event.
-			imageLoadEvent, err := tcg.ParseEFIImageLoad(bytes.NewReader(event.RawData()))
+			_, err := tcg.ParseEFIImageLoad(bytes.NewReader(event.RawData()))
 			if err != nil {
 				return nil, fmt.Errorf("failed parsing EFI image load at host kernel event %d: %v", event.Num(), err)
-			}
-
-			state.HostKernelImageLoad = &pb.GMESState_ImageLoad{
-				LoadAddress:      imageLoadEvent.Header.LoadAddr,
-				ImageLength:      imageLoadEvent.Header.Length,
-				LinkAddress:      imageLoadEvent.Header.LinkAddr,
-				DevicePathLength: imageLoadEvent.Header.DevicePathLen,
-				DevicePath:       imageLoadEvent.DevPathData,
 			}
 
 		case registerCfg.MBMIdx:

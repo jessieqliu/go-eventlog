@@ -683,13 +683,6 @@ func TestGMESState(t *testing.T) {
 		BmcFirmwareDigest: decodeHex("c02bb61127ae90e3fcf2601702805592f5ee0952ee3a8bc518ac0171a75e1342"),
 		BiosDigest:        decodeHex("44b389a3de1020401e9dc7adbb8b1515e5cade4a9bdfa9cce412f3e7ba9c1650"),
 		HostKernelDigest:  decodeHex("825473358df6447f49eaaea583ab0d424fe9ba3aeeb13d0f739f3e942398701c"),
-		HostKernelImageLoad: &pb.GMESState_ImageLoad{
-			LoadAddress:      0x63407018,
-			ImageLength:      15613408,
-			LinkAddress:      0x0,
-			DevicePathLength: 136,
-			DevicePath:       decodeHex("02010c00d041030a200000000101060000010101060001000317100001000000000000000000000004012a000c00000000d0030000000000000002000000000056f5e6005eae42c9a0e1cd8fb5a1c6100202040432004500460049005c005c0042004f004f0054005c005c0042004f004f0054005800360034002e0065006600690000007fff0400"),
-		},
 	}
 
 	pcrBank := testutil.MakePCRBank(pb.HashAlgo_SHA256, map[uint32][]byte{
@@ -715,18 +708,6 @@ func TestGMESState(t *testing.T) {
 }
 
 func TestGMESStateErrors(t *testing.T) {
-	// In this library version, ReplayedDigest() returns the event digest (H(data)).
-	calcReplayed := func(data []byte) []byte {
-		h := sha256.New()
-		h.Write(data)
-		return h.Sum(nil)
-	}
-
-	expectedState := &pb.GMESState{
-		BmcFirmwareDigest: calcReplayed([]byte(gmes.BMCData)),
-		BiosDigest:        calcReplayed([]byte(gmes.BIOSData)),
-	}
-
 	validEvents := []tcg.Event{
 		newEvent(t, gmes.PCRConfig.BMCFirmwareIdx, tcg.EFIHCRTMEvent, []byte(gmes.BMCData)),
 		newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx),
@@ -740,33 +721,63 @@ func TestGMESStateErrors(t *testing.T) {
 	testcases := []struct {
 		name          string
 		events        []tcg.Event
-		expectedState *pb.GMESState
+		expectedErrStr 	string
 	}{
 		{
 			name:          "duplicate separator",
 			events:        append(validEvents, newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx)),
-			expectedState: nil, // Expect failure.
+			expectedErrStr: "duplicate separator event",
 		},
 		{
-			name: "event after separator ignored",
+			name: "event after separator",
 			events: append(validEvents,
 				newSeparatorEvent(t, gmes.PCRConfig.HostKernelIdx),
 				newEvent(t, gmes.PCRConfig.HostKernelIdx, tcg.EFIBootServicesApplication, []byte("ModifiedKernel")),
 			),
-			expectedState: expectedState, // Should ignore the event after the separator.
+			expectedErrStr: "found event after separator",
+		},
+		{
+			name: "invalid BMC event type",
+			events: []tcg.Event{
+				newEvent(t, gmes.PCRConfig.BMCFirmwareIdx, tcg.GoogleDRTMEvent, []byte(gmes.BMCData)),
+				newSeparatorEvent(t, gmes.PCRConfig.BMCFirmwareIdx),
+			},
+			expectedErrStr: "unexpected event type for BMC firmware",
+		},
+		{
+			name: "invalid BIOS event type",
+			events: []tcg.Event{
+				newEvent(t, gmes.PCRConfig.BIOSIdx, tcg.EFIHCRTMEvent, []byte(gmes.BIOSData)),
+				newSeparatorEvent(t, gmes.PCRConfig.BIOSIdx),
+			},
+			expectedErrStr: "unexpected event type for BIOS",
+		},
+		{
+			name: "invalid Host Kernel event type",
+			events: []tcg.Event{
+				newEvent(t, gmes.PCRConfig.HostKernelIdx, tcg.GoogleDRTMEvent, []byte("testhostkernel")),
+				newSeparatorEvent(t, gmes.PCRConfig.HostKernelIdx),
+			},
+			expectedErrStr: "unexpected event type for host kernel",
+		},
+		{
+			name: "unknown MR index",
+			events: []tcg.Event{
+				newEvent(t, 999, tcg.EFIHCRTMEvent, []byte("unknown data")),
+			},
+			expectedErrStr: "unknown MR index",
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotState, err := GMESState(crypto.SHA256, getEventsFromLog(t, tc.events))
-
-			if (err != nil) != (tc.expectedState == nil) {
-				t.Fatalf("GMESState() error = %v, wantErr: %v", err, tc.expectedState == nil)
+			_, err := GMESState(crypto.SHA256, getEventsFromLog(t, tc.events))
+			if err == nil {
+				t.Fatalf("GMESState() expected error containing %q, but got nil", tc.expectedErrStr)
 			}
 
-			if tc.expectedState != nil && !cmp.Equal(gotState, tc.expectedState, protocmp.Transform()) {
-				t.Errorf("GMESState() = got %+v, want %+v", gotState, tc.expectedState)
+			if !strings.Contains(err.Error(), tc.expectedErrStr) {
+				t.Errorf("GMESState() expected error containing %q, but got %v", tc.expectedErrStr, err)
 			}
 		})
 	}
