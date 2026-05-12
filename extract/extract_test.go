@@ -748,8 +748,8 @@ func TestGMESStateErrors(t *testing.T) {
 			expectedState: nil, // Expect failure.
 		},
 		{
-			name:          "event after separator ignored",
-			events:        append(validEvents, 
+			name: "event after separator ignored",
+			events: append(validEvents,
 				newSeparatorEvent(t, gmes.PCRConfig.HostKernelIdx),
 				newEvent(t, gmes.PCRConfig.HostKernelIdx, tcg.EFIBootServicesApplication, []byte("ModifiedKernel")),
 			),
