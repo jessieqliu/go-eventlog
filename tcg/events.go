@@ -105,7 +105,7 @@ const (
 	EFIVariableAuthority       EventType = 0x800000E0
 )
 
-// Custom DRTM event type for GMES.
+// GoogleDRTMEvent is a custom DRTM event type for Google measurements.
 const GoogleDRTMEvent EventType = 0x10000000
 
 // EventTypeNames maps an EventType to its name.
@@ -145,8 +145,8 @@ var EventTypeNames = map[EventType]string{
 	EFIVariableBoot2:           "EFI Variable Boot2",
 	EFIHCRTMEvent:              "EFI H-CRTM Event",
 	EFIVariableAuthority:       "EFI Variable Authority",
-	
-	GoogleDRTMEvent:            "Google DRTM Event",
+
+	GoogleDRTMEvent: "Google DRTM Event",
 }
 
 var eventTypeStrings = map[uint32]string{
