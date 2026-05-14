@@ -595,5 +595,12 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*pb.GMESState, error) {
 		}
 	}
 
+	// Confirm separators were found.
+	for mrIndex, seen := range seenSeparators {
+		if !seen {
+			return nil, fmt.Errorf("missing separator event for MR%d", mrIndex)
+		}
+	}
+
 	return state, nil
 }
