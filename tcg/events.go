@@ -146,6 +146,7 @@ var EventTypeNames = map[EventType]string{
 	EFIHCRTMEvent:              "EFI H-CRTM Event",
 	EFIVariableAuthority:       "EFI Variable Authority",
 
+	// Custom event type, not in TCG spec.
 	GoogleDRTMEvent: "Google DRTM Event",
 }
 

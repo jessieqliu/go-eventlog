@@ -895,6 +895,9 @@ func getEventsFromLog(t *testing.T, events []tcg.Event) []tcg.Event {
 			h.Write(current)
 		} else {
 			// First event for this PCR - initialize with zeros.
+			// Note this is a simplification for some PCRs. PCRs 17-23 are initialized with 0xFF but
+			// the DRTM event clears the index to 0x00 before extending. Starting with 0x00 is functionally 
+			// the same because DRTM is always the first event, but this is subtly different from the spec.
 			initial := make([]byte, h.Size())
 			if e.Type == tcg.EFIHCRTMEvent {
 				initial[len(initial)-1] = 0x04
