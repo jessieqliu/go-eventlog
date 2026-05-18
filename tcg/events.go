@@ -185,6 +185,8 @@ var eventTypeStrings = map[uint32]string{
 	0x8000000C: "EV_EFI_VARIABLE_BOOT2",
 	0x80000010: "EV_EFI_HCRTM_EVENT",
 	0x800000E0: "EV_EFI_VARIABLE_AUTHORITY",
+
+	// Custom event type, not in TCG spec.
 	0x10000000: "EV_GOOGLE_DRTM_EVENT",
 }
 
