@@ -528,7 +528,7 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*pb.GMESState, error) {
 
 	// Track seen separators for PCRs requiring a separator.
 	seenSeparators := map[uint32]bool{
-		gmes.PCRConfig.HostKernelIdx:  false,
+		gmes.PCRConfig.HostKernelIdx: false,
 	}
 
 	for _, event := range events {
