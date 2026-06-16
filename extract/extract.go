@@ -559,7 +559,7 @@ func GMESState(hash crypto.Hash, events []tcg.Event) (*pb.GMESState, error) {
 		}
 
 		// Check for seen events.
-		if seen, ok := seenEvents[event.MRIndex()]; ok && seen{
+		if seen, ok := seenEvents[event.MRIndex()]; ok && seen {
 			return nil, fmt.Errorf("found duplicate event for MR%d at event %d, expect only one event in register", event.MRIndex(), event.Num())
 		}
 
